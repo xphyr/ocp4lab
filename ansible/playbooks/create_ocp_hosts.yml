@@ -1,0 +1,46 @@
+---
+- name: Create OSE vms 
+  hosts: bootstrap_server,master_servers,minion_servers
+  gather_facts: no
+  serial: 1
+  tasks:
+    - name: Clone the RedHat CoreOS template
+      block:
+        - name: Create vm
+          vmware_guest:
+            hostname: "{{ vcenter_ip }}"
+            username: "{{ vcenter_username }}"
+            password: "{{ vcenter_password }}"
+            validate_certs: False
+            name: "{{ inventory_hostname }}"
+            template: "{{ vm_template }}"
+            datacenter: "{{ datacenter_name }}"
+            folder: "openshift"
+            datastore: "{{ datastore }}"
+            state: poweredoff
+            cluster: "{{ cluster_name }}"
+            hardware:
+                memory_mb: "{{ memory }}"
+                num_cpus: "{{ num_cpu }}"
+            customvalues:
+                - key: "disk.EnableUUID"
+                  value: "TRUE"
+                - key: "guestinfo.ignition.config.data"
+                  value: "{{ lookup('file', ign_template) | b64encode }}"
+                - key: "guestinfo.ignition.config.data.encoding"
+                  value: "base64"
+            networks:
+            - name: "{{ target_network }}"
+            wait_for_ip_address: no
+          delegate_to: localhost
+          register: vminfo
+        - lineinfile:
+            path: files/static_entry.conf 
+            line: "dhcp-host={{ vminfo.instance.hw_eth0.macaddress }},{{ inventory_hostname }},{{ ansible_host }}"
+            create: yes
+          delegate_to: localhost
+        - lineinfile:
+            path: files/ocp_add_hosts
+            line: "{{ ansible_host }}  {{ inventory_hostname }}"
+            create: yes
+          delegate_to: localhost

@@ -1,0 +1,106 @@
+---
+- name: Create a DNS Server from Template
+  hosts: dns_server
+  gather_facts: no
+  tasks:
+    - name: Clone the template
+      vmware_guest:
+        hostname: "{{ vcenter_ip }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: False
+        name: "{{ inventory_hostname }}"
+        template: "{{ vm_template }}"
+        datacenter: "{{ datacenter_name }}"
+        folder: "openshift"
+        datastore: "{{ datastore }}"
+        state: poweredon
+        cluster: "{{ cluster_name }}"
+        customization:
+          dns_servers:
+            - "{{ upstream_dns }}"
+          domain: "{{ domain_name }}"
+        networks:
+        - name: "{{ target_network }}"
+          ip: "{{ ansible_host }}"
+          netmask: "{{ host_netmask }}"
+          gateway: "{{ host_gw }}"
+          vlan: 100
+          type: static
+        wait_for_ip_address: yes
+      delegate_to: localhost
+    - name: disable cloudinit
+      service:
+        name: cloud-init
+        enabled: no
+      become: yes
+    - name: update packages
+      yum:
+        name: "*"
+        state: latest
+      become: yes
+    - name: install additional applications
+      yum:
+        name: "dnsmasq,bind-utils,httpd"
+        state: latest
+      become: yes
+    - lineinfile:
+        path: files/ocp_add_hosts
+        line: "{{ ansible_host }}  {{ inventory_hostname }}"
+        create: yes
+      delegate_to: localhost
+- name: Configure DHCP and DNS
+  hosts: dns_server
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: apply base config file
+      template:
+        src: dnsmasq.conf.j2
+        dest: /etc/dnsmasq.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: apply base ocp config file
+      template:
+        src: dnsmasq_ocp.conf.j2
+        dest: /etc/dnsmasq.d/dnsmasq_ocp_names.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: install static mapping file
+      copy:
+        src: static_entry.conf
+        dest: /etc/dnsmasq.d/static_entry.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: install static mapping file
+      copy:
+        src: ocp_add_hosts
+        dest: /etc/ocp_add_hosts
+        owner: root
+        group: root
+        mode: '0644'
+    - name: enable and start dnsmasq
+      service:
+        name: dnsmasq
+        state: started
+        enabled: true
+- name: Configure Apache Server
+  hosts: dns_server
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: copy over bootstrap ign file
+      copy:
+        src: bootstrap.ign
+        dest: /var/www/html
+        owner: root
+        group: root
+        mode: 0644
+    - name: enable and start httpd
+      service:
+        name: httpd
+        state: started
+        enabled: true

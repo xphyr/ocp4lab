@@ -1,0 +1,66 @@
+all:
+    vars:
+        vcenter_ip: "vcenter.example.local"
+        vcenter_username: "Administrator@vsphere.local"
+        vcenter_password: "SuperSecretPassord"
+        datacenter_name: "MyDC"
+        cluster_name: "MyCluster"
+        datastore: "MyDataStore"
+        target_network: "MyNetwork"
+        ansible_user: "ansible"
+        domain_name: "ose.example.local"
+        upstream_dns: "8.8.8.8"
+        broadcast_address: "192.168.200.255"
+        host_netmask: "255.255.255.0"
+        host_gw: "192.168.200.1"
+        dhcp_subnet: "192.168.200.0"
+        dhcp_subnet_start: "192.168.200.100"
+        dhcp_subnet_end: "192.168.200.200"
+        ocp_cluster_name: "ocp4test"
+        parallel_deploys: 2
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+    children:
+        dns_server:
+            hosts:
+                osedns1:
+                    ansible_host: "192.168.200.10"
+                    vm_template: "centos-template"
+        bootstrap_server:
+            hosts:
+                osebst1:
+                    ansible_host: "192.168.200.100"
+                    vm_template: "rhcos-430"
+            vars:
+                memory: "4096"
+                num_cpu: "4"
+                ign_template: "files/append_bootstrap.ign"
+        master_servers:
+            hosts:
+                osemstr1:
+                    ansible_host: "192.168.200.101"
+                    vm_template: "rhcos-430"
+                osemstr2:
+                    ansible_host: "192.168.200.102"
+                    vm_template: "rhcos-430"
+                osemstr3:
+                    ansible_host: "192.168.200.103"
+                    vm_template: "rhcos-430"
+            vars:
+                memory: "16384"
+                num_cpu: "4"
+                ign_template: "files/master.ign"
+        minion_servers:
+            hosts:
+                osewrkr1:
+                    ansible_host: "192.168.200.104"
+                    vm_template: "rhcos-430"
+                osewrkr2:
+                    ansible_host: "192.168.200.105"
+                    vm_template: "rhcos-430"
+                osewrkr3:
+                    ansible_host: "192.168.200.106"
+                    vm_template: "rhcos-430"
+            vars:
+                memory: "8192"
+                num_cpu: "4"
+                ign_template: "files/worker.ign"

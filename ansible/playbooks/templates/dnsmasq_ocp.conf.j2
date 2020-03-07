@@ -1,0 +1,4 @@
+cname=*.apps.{{ ocp_cluster_name }}.{{ domain_name }},apps.{{ ocp_cluster_name }}.{{ domain_name }}
+srv-host=_etcd-server-ssl._tcp.{{ ocp_cluster_name }}.{{ domain_name }},etcd-0.{{ ocp_cluster_name }}.{{ domain_name }},2380
+srv-host=_etcd-server-ssl._tcp.{{ ocp_cluster_name }}.{{ domain_name }},etcd-1.{{ ocp_cluster_name }}.{{ domain_name }},2380
+srv-host=_etcd-server-ssl._tcp.{{ ocp_cluster_name }}.{{ domain_name }},etcd-2.{{ ocp_cluster_name }}.{{ domain_name }},2380
