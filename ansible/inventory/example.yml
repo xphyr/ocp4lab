@@ -19,6 +19,7 @@ all:
         ocp_cluster_name: "ocp4test"
         parallel_deploys: 2
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no"
+        temp_dir: "/tmp/ocp/"
     children:
         dns_server:
             hosts:
@@ -31,7 +32,7 @@ all:
                     ansible_host: "192.168.200.100"
                     vm_template: "rhcos-430"
             vars:
-                memory: "4096"
+                memory: "16384"
                 num_cpu: "4"
                 ign_template: "files/append_bootstrap.ign"
         master_servers:

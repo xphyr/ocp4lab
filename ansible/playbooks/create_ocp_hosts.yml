@@ -1,21 +1,35 @@
 ---
+- name: Setup vcenter_folder
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Create a VM folder on given datacenter
+      vcenter_folder:
+        hostname: '{{ vcenter_hostname }}'
+        username: '{{ vcenter_username }}'
+        password: '{{ vcenter_password }}'
+        datacenter_name: "{{ datacenter_name }}"
+        folder_name: "{{ vmware_folder }}"
+        folder_type: vm
+        state: present
+        validate_certs: False
 - name: Create OSE vms 
   hosts: bootstrap_server,master_servers,minion_servers
   gather_facts: no
-  serial: 1
+  # serial: 2
   tasks:
     - name: Clone the RedHat CoreOS template
       block:
         - name: Create vm
           vmware_guest:
-            hostname: "{{ vcenter_ip }}"
+            hostname: "{{ vcenter_hostname }}"
             username: "{{ vcenter_username }}"
             password: "{{ vcenter_password }}"
             validate_certs: False
             name: "{{ inventory_hostname }}"
             template: "{{ vm_template }}"
             datacenter: "{{ datacenter_name }}"
-            folder: "openshift"
+            folder: "{{ vmware_folder }}"
             datastore: "{{ datastore }}"
             state: poweredoff
             cluster: "{{ cluster_name }}"
@@ -34,13 +48,15 @@
             wait_for_ip_address: no
           delegate_to: localhost
           register: vminfo
-        - lineinfile:
-            path: files/static_entry.conf 
-            line: "dhcp-host={{ vminfo.instance.hw_eth0.macaddress }},{{ inventory_hostname }},{{ ansible_host }}"
-            create: yes
-          delegate_to: localhost
-        - lineinfile:
-            path: files/ocp_add_hosts
-            line: "{{ ansible_host }}  {{ inventory_hostname }}"
-            create: yes
+        - name: Update MAC mac_address
+          vmware_guest_network:
+            hostname: "{{ vcenter_hostname }}"
+            username: "{{ vcenter_username }}"
+            password: "{{ vcenter_password }}"
+            validate_certs: False
+            name: "{{ inventory_hostname }}"
+            networks:
+            - label: "Network adapter 1"
+              state: present
+              manual_mac: "{{ mac_address }}"
           delegate_to: localhost
